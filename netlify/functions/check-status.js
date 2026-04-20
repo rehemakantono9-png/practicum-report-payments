@@ -1,5 +1,20 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://rehemakantono9-png.github.io",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Content-Type": "application/json"
+};
+
 exports.handler = async function (event) {
   try {
+    if (event.httpMethod === "OPTIONS") {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: ""
+      };
+    }
+
     const consumerKey = process.env.PESAPAL_CONSUMER_KEY;
     const consumerSecret = process.env.PESAPAL_CONSUMER_SECRET;
     const baseUrl = process.env.PESAPAL_BASE_URL;
@@ -7,9 +22,7 @@ exports.handler = async function (event) {
     if (!consumerKey || !consumerSecret || !baseUrl) {
       return {
         statusCode: 500,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Missing required environment variables."
         })
@@ -23,9 +36,7 @@ exports.handler = async function (event) {
     if (!orderTrackingId) {
       return {
         statusCode: 400,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Missing orderTrackingId."
         })
@@ -48,9 +59,7 @@ exports.handler = async function (event) {
     if (!authData.token) {
       return {
         statusCode: 500,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Failed to get auth token.",
           details: authData
@@ -73,17 +82,13 @@ exports.handler = async function (event) {
 
     return {
       statusCode: statusResponse.status,
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: corsHeaders,
       body: JSON.stringify(statusData)
     };
   } catch (error) {
     return {
       statusCode: 500,
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         error: "Check status failed.",
         details: error.message
