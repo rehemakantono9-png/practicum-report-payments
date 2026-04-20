@@ -1,11 +1,24 @@
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://rehemakantono9-png.github.io",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json"
+};
+
 exports.handler = async function (event) {
   try {
+    if (event.httpMethod === "OPTIONS") {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: ""
+      };
+    }
+
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Method not allowed. Use POST."
         })
@@ -20,9 +33,7 @@ exports.handler = async function (event) {
     if (!consumerKey || !consumerSecret || !baseUrl || !backendUrl) {
       return {
         statusCode: 500,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Missing required environment variables."
         })
@@ -43,9 +54,7 @@ exports.handler = async function (event) {
     if (!amount || !email || !merchantReference || !notificationId) {
       return {
         statusCode: 400,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Missing required payment fields."
         })
@@ -68,9 +77,7 @@ exports.handler = async function (event) {
     if (!authData.token) {
       return {
         statusCode: 500,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: "Failed to get auth token.",
           details: authData
@@ -116,17 +123,13 @@ exports.handler = async function (event) {
 
     return {
       statusCode: orderResponse.status,
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: corsHeaders,
       body: JSON.stringify(orderData)
     };
   } catch (error) {
     return {
       statusCode: 500,
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         error: "Submit order failed.",
         details: error.message
