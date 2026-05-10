@@ -25,35 +25,35 @@ exports.handler = async (event) => {
         const env = process.env.PESAPAL_ENV || "SANDBOX";
         const base = env === "LIVE" ? LIVE : SANDBOX;
 
-        const { amount, email, name, productType, productName } = JSON.parse(event.body || "{}");
+        const { amount, email, name, productType } = JSON.parse(event.body || "{}");
 
         // Determine product description based on type
         let productDisplayName = "";
-        let productDescription = "";
+        let productIdPrefix = "";
 
         switch (productType) {
             case "cv":
                 productDisplayName = `${BRAND_NAME} - CV Builder`;
-                productDescription = "Professional CV Builder - Complete CV with AI suggestions";
+                productIdPrefix = "CV";
                 break;
             case "internship":
                 productDisplayName = `${BRAND_NAME} - Internship Report Builder`;
-                productDescription = "Internship Report Builder - Complete report with logbook to report generation";
+                productIdPrefix = "INTR";
                 break;
             case "coverletter":
                 productDisplayName = `${BRAND_NAME} - Cover Letter Generator`;
-                productDescription = "Professional Cover Letter Generator - AI-powered";
+                productIdPrefix = "CL";
                 break;
             default:
                 productDisplayName = `${BRAND_NAME} - Digital Product`;
-                productDescription = productName || "Professional Digital Product";
+                productIdPrefix = "GEN";
         }
 
         const tokenRes = await getToken(base);
         const token = tokenRes.token;
 
         const payload = {
-            id: productType + "_" + Date.now(),
+            id: `${productIdPrefix}_${Date.now()}`,
             currency: "UGX",
             amount: Number(amount),
             description: productDisplayName,
