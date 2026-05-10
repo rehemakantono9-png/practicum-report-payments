@@ -1,139 +1,97 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://rehemakantono9-png.github.io",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json"
-};
+const SANDBOX = "https://cybqa.pesapal.com/pesapalv3/api";
+const LIVE = "https://pay.pesapal.com/v3/api";
 
-exports.handler = async function (event) {
-  try {
-    if (event.httpMethod === "OPTIONS") {
-      return {
-        statusCode: 200,
-        headers: corsHeaders,
-        body: ""
-      };
-    }
+// REMMIE KOMM HUB - MASTER BRAND
+const BRAND_NAME = "Remmie Komm Hub";
 
-    if (event.httpMethod !== "POST") {
-      return {
-        statusCode: 405,
-        headers: corsHeaders,
+async function getToken(base) {
+    const r = await fetch(`${base}/Auth/RequestToken`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          error: "Method not allowed. Use POST."
+            consumer_key: process.env.PESAPAL_CONSUMER_KEY,
+            consumer_secret: process.env.PESAPAL_CONSUMER_SECRET
         })
-      };
-    }
-
-    const consumerKey = process.env.PESAPAL_CONSUMER_KEY;
-    const consumerSecret = process.env.PESAPAL_CONSUMER_SECRET;
-    const baseUrl = process.env.PESAPAL_BASE_URL;
-    const backendUrl = process.env.BACKEND_URL;
-
-    if (!consumerKey || !consumerSecret || !baseUrl || !backendUrl) {
-      return {
-        statusCode: 500,
-        headers: corsHeaders,
-        body: JSON.stringify({
-          error: "Missing required environment variables."
-        })
-      };
-    }
-
-    const body = JSON.parse(event.body || "{}");
-
-    const amount = parseFloat(body.amount);
-    const email = body.email;
-    const phoneNumber = body.phone_number || "";
-    const firstName = body.first_name || "Student";
-    const lastName = body.last_name || "User";
-    const projectName = body.project_name || "Practicum Report Builder Premium";
-    const merchantReference = body.merchant_reference;
-    const notificationId = body.notification_id;
-
-    if (!amount || !email || !merchantReference || !notificationId) {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({
-          error: "Missing required payment fields."
-        })
-      };
-    }
-
-    const authResponse = await fetch(`${baseUrl}/api/Auth/RequestToken`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        consumer_key: consumerKey,
-        consumer_secret: consumerSecret
-      })
     });
+    return r.json();
+}
 
-    const authData = await authResponse.json();
+exports.handler = async (event) => {
+    try {
+        if (event.httpMethod !== "POST") {
+            return { statusCode: 405, body: "Method not allowed" };
+        }
 
-    if (!authData.token) {
-      return {
-        statusCode: 500,
-        headers: corsHeaders,
-        body: JSON.stringify({
-          error: "Failed to get auth token.",
-          details: authData
-        })
-      };
+        const env = process.env.PESAPAL_ENV || "SANDBOX";
+        const base = env === "LIVE" ? LIVE : SANDBOX;
+
+        const { amount, email, name, productType, productName } = JSON.parse(event.body || "{}");
+
+        // Determine product description based on type
+        let productDisplayName = "";
+        let productDescription = "";
+
+        switch (productType) {
+            case "cv":
+                productDisplayName = `${BRAND_NAME} - CV Builder`;
+                productDescription = "Professional CV Builder - Complete CV with AI suggestions";
+                break;
+            case "internship":
+                productDisplayName = `${BRAND_NAME} - Internship Report Builder`;
+                productDescription = "Internship Report Builder - Complete report with logbook to report generation";
+                break;
+            case "coverletter":
+                productDisplayName = `${BRAND_NAME} - Cover Letter Generator`;
+                productDescription = "Professional Cover Letter Generator - AI-powered";
+                break;
+            default:
+                productDisplayName = `${BRAND_NAME} - Digital Product`;
+                productDescription = productName || "Professional Digital Product";
+        }
+
+        const tokenRes = await getToken(base);
+        const token = tokenRes.token;
+
+        const payload = {
+            id: productType + "_" + Date.now(),
+            currency: "UGX",
+            amount: Number(amount),
+            description: productDisplayName,
+            callback_url: process.env.PESAPAL_CALLBACK_URL,
+            notification_id: process.env.PESAPAL_IPN_ID,
+            billing_address: {
+                email_address: email,
+                first_name: name.split(" ")[0] || name,
+                last_name: name.split(" ").slice(1).join(" ") || "",
+                country_code: "UG"
+            }
+        };
+
+        const r = await fetch(`${base}/Transactions/SubmitOrderRequest`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resData = await r.json();
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ 
+                ok: true, 
+                redirect_url: resData.redirect_url,
+                product: productDisplayName
+            })
+        };
+    } catch (error) {
+        console.error("Payment error:", error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ ok: false, error: "Submit order failed" })
+        };
     }
-
-    const callbackUrl = `${backendUrl}/.netlify/functions/callback`;
-
-    const orderPayload = {
-      id: merchantReference,
-      currency: "UGX",
-      amount: amount,
-      description: `Payment for ${projectName}`,
-      callback_url: callbackUrl,
-      notification_id: notificationId,
-      billing_address: {
-        email_address: email,
-        phone_number: phoneNumber,
-        country_code: "UG",
-        first_name: firstName,
-        middle_name: "",
-        last_name: lastName,
-        line_1: "N/A",
-        line_2: "",
-        city: "Kampala",
-        state: "UG",
-        postal_code: "00000",
-        zip_code: "00000"
-      }
-    };
-
-    const orderResponse = await fetch(`${baseUrl}/api/Transactions/SubmitOrderRequest`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authData.token}`
-      },
-      body: JSON.stringify(orderPayload)
-    });
-
-    const orderData = await orderResponse.json();
-
-    return {
-      statusCode: orderResponse.status,
-      headers: corsHeaders,
-      body: JSON.stringify(orderData)
-    };
-  } catch (error) {
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({
-        error: "Submit order failed.",
-        details: error.message
-      })
-    };
-  }
 };
