@@ -1,12 +1,31 @@
 // netlify/functions/groq-generate.js
-// This function handles AI report generation using Groq API
+// AI Report Generation using Groq API
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 exports.handler = async (event) => {
+    // Handle CORS preflight request (important for cross-domain requests)
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 204,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            }
+        };
+    }
+
     // Only allow POST requests
     if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+        return {
+            statusCode: 405,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
+            body: JSON.stringify({ error: 'Method Not Allowed' })
+        };
     }
     
     try {
@@ -15,93 +34,34 @@ exports.handler = async (event) => {
         if (!prompt) {
             return {
                 statusCode: 400,
+                headers: { 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ success: false, error: 'Missing prompt' })
             };
         }
         
         // If no API key (demo mode), return a sample report
         if (!GROQ_API_KEY || GROQ_API_KEY === '') {
-            // Return a sample report for demonstration
-            const studentName = prompt.match(/Name: (.*?)(?:\n|$)/)?.[1] || 'Student';
-            const currentDate = new Date().toLocaleDateString('en-GB');
-            
             const sampleReport = `<div class="premium-report">
 <div class="title-page">
 <div class="uni-name">Islamic University in Uganda</div>
 <div class="faculty-name">Faculty of Arts and Social Sciences</div>
-<div class="logo-placeholder">☐</div>
 <div class="report-title">INTERNSHIP REPORT</div>
-<div class="student-name">${escapeHtml(studentName)}</div>
-<div class="submission-info">Submitted in partial fulfillment of the requirements</div>
-<div class="date">${currentDate}</div>
+<div class="student-name">Student Name</div>
+<div class="submission-info">Internship Report</div>
 </div>
-
-<div class="page-break"></div>
-
-<div class="declaration-box">
-<h2>DECLARATION</h2>
-<p>I, ${escapeHtml(studentName)}, hereby declare that this internship report is my original work and has not been submitted for any other qualification.</p>
-<div class="signature-line">Signature: _________________ Date: ${currentDate}</div>
-</div>
-
-<div class="page-break"></div>
-
 <div class="chapter">
 <h2>CHAPTER ONE: INTRODUCTION</h2>
-<h3>1.1 Background of Internship</h3>
-<p>This internship was undertaken to fulfill the practical training requirements of the academic programme. The experience provided valuable exposure to professional workplace operations.</p>
-<h3>1.2 Objectives</h3>
-<ul>
-<li>To apply theoretical knowledge to practical work situations</li>
-<li>To gain professional experience and develop workplace competencies</li>
-<li>To understand organizational culture and operations</li>
-</ul>
+<p>This internship provided valuable practical experience in a professional environment.</p>
 </div>
-
-<div class="page-break"></div>
-
 <div class="chapter">
-<h2>CHAPTER TWO: INTERNSHIP ACTIVITIES</h2>
-<p>During the internship period, the student engaged in various activities that developed professional skills and practical competencies. These included daily tasks assigned by the supervisor, participation in team meetings, and completion of specific projects.</p>
-</div>
-
-<div class="page-break"></div>
-
-<div class="chapter">
-<h2>CHAPTER THREE: SKILLS AND LEARNING</h2>
-<p>The internship enabled the development of communication, teamwork, problem-solving, and time management skills. The student learned to work under pressure, meet deadlines, and collaborate effectively with colleagues.</p>
-</div>
-
-<div class="page-break"></div>
-
-<div class="chapter">
-<h2>CHAPTER FOUR: CONCLUSION AND RECOMMENDATIONS</h2>
-<h3>4.1 Conclusion</h3>
-<p>The internship was a transformative learning experience that bridged the gap between academic theory and professional practice.</p>
-<h3>4.2 Recommendations</h3>
-<p>Future students should be proactive, maintain detailed documentation, and seek feedback regularly. The university should strengthen pre-internship orientation programs.</p>
-</div>
-
-<div class="page-break"></div>
-
-<div class="references">
-<h2>REFERENCES</h2>
-<p>Islamic University in Uganda Internship Guidelines Handbook</p>
+<h2>CHAPTER TWO: ACTIVITIES</h2>
+<p>The student engaged in various activities that developed professional competencies.</p>
 </div>
 </div>`;
             
-            function escapeHtml(str) {
-                if (!str) return '';
-                return str.replace(/[&<>]/g, function(m) {
-                    if (m === '&') return '&amp;';
-                    if (m === '<') return '&lt;';
-                    if (m === '>') return '&gt;';
-                    return m;
-                });
-            }
-            
             return {
                 statusCode: 200,
+                headers: { 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ success: true, content: sampleReport, mode: 'demo' })
             };
         }
@@ -132,12 +92,14 @@ exports.handler = async (event) => {
         if (data.choices && data.choices[0] && data.choices[0].message) {
             return {
                 statusCode: 200,
+                headers: { 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ success: true, content: data.choices[0].message.content })
             };
         } else {
             console.error('Groq API error:', data);
             return {
                 statusCode: 500,
+                headers: { 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ success: false, error: data.error?.message || 'AI generation failed' })
             };
         }
@@ -146,6 +108,7 @@ exports.handler = async (event) => {
         console.error('Groq function error:', error);
         return {
             statusCode: 500,
+            headers: { 'Access-Control-Allow-Origin': '*' },
             body: JSON.stringify({ success: false, error: error.message })
         };
     }
