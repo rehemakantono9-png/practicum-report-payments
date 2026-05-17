@@ -1,9 +1,10 @@
 // netlify/functions/groq-generate.js
-// Using Google Gemini API - Free tier available
+// Using Google Gemini API with the correct model name
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 exports.handler = async (event) => {
+    // Handle CORS preflight request
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 204,
@@ -15,6 +16,7 @@ exports.handler = async (event) => {
         };
     }
 
+    // Only allow POST requests
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -34,8 +36,8 @@ exports.handler = async (event) => {
             };
         }
         
-        // Call Gemini API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        // Call Gemini API with the correct model name
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
