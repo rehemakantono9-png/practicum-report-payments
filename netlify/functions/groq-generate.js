@@ -1,10 +1,10 @@
 // netlify/functions/groq-generate.js
-// AI Report Generation using Groq API - Working with llama-3.1 model
+// Using OpenAI API - Stable and reliable
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 exports.handler = async (event) => {
-    // Handle CORS preflight request
+    // Handle CORS preflight
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 204,
@@ -16,7 +16,6 @@ exports.handler = async (event) => {
         };
     }
 
-    // Only allow POST requests
     if (event.httpMethod !== 'POST') {
         return {
             statusCode: 405,
@@ -36,15 +35,15 @@ exports.handler = async (event) => {
             };
         }
         
-        // Call Groq API with current working model
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        // Call OpenAI API
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${GROQ_API_KEY}`,
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.1-70b-versatile',
+                model: 'gpt-3.5-turbo',
                 messages: [
                     { 
                         role: 'system', 
@@ -59,9 +58,8 @@ exports.handler = async (event) => {
         
         const data = await response.json();
         
-        // Check for errors
         if (data.error) {
-            console.error('Groq API Error:', data.error);
+            console.error('OpenAI API Error:', data.error);
             return {
                 statusCode: 500,
                 headers: { 'Access-Control-Allow-Origin': '*' },
@@ -69,7 +67,6 @@ exports.handler = async (event) => {
             };
         }
         
-        // Return successful response
         if (data.choices && data.choices[0] && data.choices[0].message) {
             return {
                 statusCode: 200,
@@ -87,7 +84,7 @@ exports.handler = async (event) => {
             };
         }
     } catch (error) {
-        console.error('Groq function error:', error);
+        console.error('Function error:', error);
         return {
             statusCode: 500,
             headers: { 'Access-Control-Allow-Origin': '*' },
